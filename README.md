@@ -20,4 +20,4 @@ This repository is published from Kanorio's own source and is overwritten on eve
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT No Attribution (MIT-0): you can use, change and sell what you build from these examples without crediting Kanorio or keeping a license notice. See [LICENSE](./LICENSE).

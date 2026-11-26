@@ -285,8 +285,8 @@
       {
         "id": "segments",
         "scope": "item",
-        "tsType": "Array<{ type: \"markdown\"; value: string } | { type: \"cta\"; config: { content: string; type: \"preset\" | \"custom\"; slug?: string; buttonText?: string; href?: string } } | { type: \"faq\"; config: { title?: string; items: Array<{ question: string; answer: string }> } } | { type: \"toggle\"; config: { title: string; content: string } } | { type: \"callout\"; config: { tone: \"info\" | \"warning\" | \"tip\" | \"danger\"; title?: string; content: string } } | { type: \"embed\"; config: { url: string; embedType: \"youtube\" | \"vimeo\" | \"google-maps\" | \"figma\" | \"codepen\" | \"generic\" } } | { type: \"gallery\"; config: { cols: 2 | 3 | 4; items: Array<{ src: string; alt: string }> } } | { type: \"audio\"; config: { src: string; title?: string } } | { type: \"pdf\"; config: { src: string; title?: string; pageCount?: number; thumbnailUrl?: string; assetId?: string; display?: \"preview\" | \"card\" } } | { type: \"file\"; config: { assetId: string; name: string; size?: number; mimeType?: string; url?: string | null } }>",
-        "description": "Portable content segments (markdown, cta, faq, toggle, callout, embed, gallery, audio, pdf, file) with asset:<id> references expanded."
+        "tsType": "Array<{ type: \"markdown\"; value: string } | { type: \"cta\"; config: { content: string; type: \"preset\" | \"custom\"; slug?: string; buttonText?: string; href?: string } } | { type: \"faq\"; config: { title?: string; items: Array<{ question: string; answer: string }> } } | { type: \"toggle\"; config: { title: string; content: string } } | { type: \"callout\"; config: { tone: \"info\" | \"warning\" | \"tip\" | \"danger\"; title?: string; content: string } } | { type: \"embed\"; config: { url: string; embedType: \"youtube\" | \"vimeo\" | \"google-maps\" | \"figma\" | \"codepen\" | \"generic\" | \"video\"; assetId?: string; embedUrl?: string | null } } | { type: \"gallery\"; config: { cols: 2 | 3; items: Array<{ src: string; alt: string; assetId?: string }>; lightbox?: boolean } } | { type: \"audio\"; config: { src: string; title?: string; assetId?: string } } | { type: \"pdf\"; config: { src: string; title?: string; pageCount?: number; thumbnailUrl?: string; assetId?: string; downloadUrl?: string | null; display?: \"preview\" | \"card\" } } | { type: \"file\"; config: { assetId: string; name: string; size?: number; mimeType?: string; url?: string | null; downloadUrl?: string | null } }>",
+        "description": "Portable content segments (markdown, cta, faq, toggle, callout, embed, gallery, audio, pdf, file) with asset:<id> references expanded. pdf and file downloadUrl is an absolute URL on the Kanorio app host; it is null for pdf blocks and PDF file attachments when the site does not allow downloads (other file attachments always download); gallery lightbox is true when the site's blog inline zoom is on (default on)."
       },
       {
         "id": "primary_author",
@@ -319,7 +319,7 @@
         "scope": "item",
         "tsType": "string",
         "when": "formats includes html",
-        "description": "Semantic HTML rendering of the article body with kanorio-* classes."
+        "description": "Semantic HTML: native img/video/iframe tags with srcset and dimensions where known, data-kanorio-asset on Kanorio-hosted media, data-kanorio-lightbox on every image that is not inside a link when the site's blog inline zoom is on (default on), and PDF/file download links (absolute URLs on the Kanorio app host) when the site allows downloads; block wrappers still use kanorio-* classes (cta, faq, table scroll shell)."
       },
       {
         "id": "plaintext",

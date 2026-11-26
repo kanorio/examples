@@ -18,10 +18,20 @@ export interface DeliveryAsset {
   kind: DeliveryAssetKind;
   /** Low-quality image placeholder data URL (16px WebP); null for SVG, animated images and legacy uploads */
   placeholder: string | null;
+  edgeColor: string | null;
+  processing: "ready" | "processing" | "waiting_storage" | "failed";
+  renditions?: { kind: "hls" | "thumbnails"; url: string; mimeType: string; width?: number; height?: number }[];
+  streaming?: "partial" | "ready";
+  captions?: { locale: string; url: string; mimeType: "text/vtt"; source: "ai" | "upload" | "translation"; edited: boolean }[];
+  chapters?: { url: string; mimeType: "text/vtt" };
   /** Credit line set in the media library (photographer or rights holder); filled automatically for stock photos */
   credit: string | null;
   /** Where the file came from (the stock photo's page, the original source) */
   sourceUrl: string | null;
+  poster: string | null;
+  duration: number | null;
+  pageCount: number | null;
+  fileName: string | null;
 }
 
 export type DeliveryAssetMap = Record<string, DeliveryAsset>;
@@ -357,11 +367,11 @@ export interface BlogExpanded {
 }
 
 export interface BlogItem extends DeliveryItemEnvelope<BlogFieldData, BlogExpanded> {
-  /** Portable content segments (markdown, cta, faq, toggle, callout, embed, gallery, audio, pdf, file) with asset:<id> references expanded. */
-  segments?: Array<{ type: "markdown"; value: string } | { type: "cta"; config: { content: string; type: "preset" | "custom"; slug?: string; buttonText?: string; href?: string } } | { type: "faq"; config: { title?: string; items: Array<{ question: string; answer: string }> } } | { type: "toggle"; config: { title: string; content: string } } | { type: "callout"; config: { tone: "info" | "warning" | "tip" | "danger"; title?: string; content: string } } | { type: "embed"; config: { url: string; embedType: "youtube" | "vimeo" | "google-maps" | "figma" | "codepen" | "generic" } } | { type: "gallery"; config: { cols: 2 | 3 | 4; items: Array<{ src: string; alt: string }> } } | { type: "audio"; config: { src: string; title?: string } } | { type: "pdf"; config: { src: string; title?: string; pageCount?: number; thumbnailUrl?: string; assetId?: string; display?: "preview" | "card" } } | { type: "file"; config: { assetId: string; name: string; size?: number; mimeType?: string; url?: string | null } }>;
+  /** Portable content segments (markdown, cta, faq, toggle, callout, embed, gallery, audio, pdf, file) with asset:<id> references expanded. pdf and file downloadUrl is an absolute URL on the Kanorio app host; it is null for pdf blocks and PDF file attachments when the site does not allow downloads (other file attachments always download); gallery lightbox is true when the site's blog inline zoom is on (default on). */
+  segments?: Array<{ type: "markdown"; value: string } | { type: "cta"; config: { content: string; type: "preset" | "custom"; slug?: string; buttonText?: string; href?: string } } | { type: "faq"; config: { title?: string; items: Array<{ question: string; answer: string }> } } | { type: "toggle"; config: { title: string; content: string } } | { type: "callout"; config: { tone: "info" | "warning" | "tip" | "danger"; title?: string; content: string } } | { type: "embed"; config: { url: string; embedType: "youtube" | "vimeo" | "google-maps" | "figma" | "codepen" | "generic" | "video"; assetId?: string; embedUrl?: string | null } } | { type: "gallery"; config: { cols: 2 | 3; items: Array<{ src: string; alt: string; assetId?: string }>; lightbox?: boolean } } | { type: "audio"; config: { src: string; title?: string; assetId?: string } } | { type: "pdf"; config: { src: string; title?: string; pageCount?: number; thumbnailUrl?: string; assetId?: string; downloadUrl?: string | null; display?: "preview" | "card" } } | { type: "file"; config: { assetId: string; name: string; size?: number; mimeType?: string; url?: string | null; downloadUrl?: string | null } }>;
   /** Table of contents built from H2/H3 headings; ids match the anchors in contentHtml. */
   toc?: Array<{ id: string; label: string; level: 2 | 3 }>;
-  /** Semantic HTML rendering of the article body with kanorio-* classes. Present when formats includes html. */
+  /** Semantic HTML: native img/video/iframe tags with srcset and dimensions where known, data-kanorio-asset on Kanorio-hosted media, data-kanorio-lightbox on every image that is not inside a link when the site's blog inline zoom is on (default on), and PDF/file download links (absolute URLs on the Kanorio app host) when the site allows downloads; block wrappers still use kanorio-* classes (cta, faq, table scroll shell). Present when formats includes html. */
   contentHtml?: string;
   /** Plain-text rendering of the article body (for search indexes and excerpts). Present when formats includes plaintext. */
   plaintext?: string;

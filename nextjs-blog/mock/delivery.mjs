@@ -34,6 +34,10 @@ const asset = (assetId) => ({
   processing: "ready",
   credit: null,
   sourceUrl: null,
+  poster: null,
+  duration: null,
+  pageCount: null,
+  fileName: null,
 });
 
 const seo = (overrides) => ({
@@ -93,6 +97,8 @@ const posts = new Map([
       // a cover only: with no share image chosen, the cover is the share image too
       cover_image: "asset_cover",
       seo: {},
+      // the body has media blocks: see MEDIA_BODY below
+      body: "media",
     },
   ],
   [
@@ -139,6 +145,100 @@ const ASSETS = {
   asset_logo: { ...asset("asset_logo"), url: "https://media.kanorio.com/example/logo.svg", width: null, height: null, mimeType: "image/svg+xml" },
 };
 
+// The media a post body uses, listed in `assets` of that post only, as the real API does
+const file = (assetId, fields) => ({ ...asset(assetId), width: null, height: null, ...fields });
+const MEDIA_ASSETS = {
+  asset_gallery_a: { ...asset("asset_gallery_a"), alt: "Loaves on the counter" },
+  asset_gallery_b: { ...asset("asset_gallery_b"), alt: "The crumb up close" },
+  asset_video: file("asset_video", {
+    url: "https://media.kanorio.com/example/tour.mp4",
+    width: 1920,
+    height: 1080,
+    mimeType: "video/mp4",
+    fileSize: 8400000,
+    kind: "video",
+    poster: imageUrl("asset_video_poster", "w=1280,fit=scale-down,q=85"),
+    duration: 42,
+    captions: [{ locale: "en", url: "https://media.kanorio.com/example/tour.en.vtt", mimeType: "text/vtt", source: "ai", edited: false }],
+  }),
+  asset_audio: file("asset_audio", { url: "https://media.kanorio.com/example/kitchen.mp3", mimeType: "audio/mpeg", fileSize: 1500000, kind: "audio", duration: 95 }),
+  asset_pdf: file("asset_pdf", { url: "https://media.kanorio.com/example/recipe.pdf", mimeType: "application/pdf", fileSize: 240000, kind: "pdf", pageCount: 2, fileName: "recipe.pdf" }),
+  asset_file: file("asset_file", {
+    url: "https://media.kanorio.com/example/shopping-list.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    fileSize: 24576,
+    kind: "document",
+    fileName: "shopping-list.xlsx",
+  }),
+};
+
+// What the real API returns for a body with a gallery, a hosted video, a YouTube embed, audio, a PDF and an attachment, on a site
+// that keeps blog image zoom on and allows downloads. Images in the body use the display size (`public`); download links are
+// absolute URLs on the Kanorio app host. Keep the strings byte for byte what the API sends, so a front end checked here works on a site
+const inlineImage = (assetId) => imageUrl(assetId, "public");
+const download = (assetId, name) => `https://app.kanorio.com/api/public/sites/${SITE_ID}/assets/${assetId}/download?name=${encodeURIComponent(name)}`;
+const sized = (assetId, w) => `${imageUrl(assetId, `w=${w},fit=scale-down,q=85`)} ${w}w`;
+const galleryImage = (assetId, alt) =>
+  `<img class="kanorio-gallery-image" alt="${alt}" loading="lazy" data-kanorio-asset="${assetId}" data-kanorio-lightbox="true" ` +
+  `src="${imageUrl(assetId, "w=800,fit=scale-down,q=85")}" srcset="${[400, 800, 1200, 1600].map((w) => sized(assetId, w)).join(", ")}" ` +
+  `sizes="(max-width: 768px) 100vw, 960px" width="1600" height="900" />`;
+const MEDIA_BODY = {
+  content: [
+    "Hello from **Third post**.",
+    `![Loaves on the counter](${inlineImage("asset_gallery_a")})`,
+    `![The crumb up close](${inlineImage("asset_gallery_b")})`,
+    "[https://media.kanorio.com/example/tour.mp4](https://media.kanorio.com/example/tour.mp4)",
+    "[https://www.youtube.com/watch?v=aqz-KE-bpKQ](https://www.youtube.com/watch?v=aqz-KE-bpKQ)",
+    "[Kitchen sounds](https://media.kanorio.com/example/kitchen.mp3)",
+    "[Recipe card](https://media.kanorio.com/example/recipe.pdf)",
+    "[Shopping list.xlsx](https://media.kanorio.com/example/shopping-list.xlsx)",
+  ].join("\n\n"),
+  segments: [
+    { type: "markdown", value: "Hello from **Third post**." },
+    {
+      type: "gallery",
+      config: {
+        cols: 2,
+        items: [
+          { src: inlineImage("asset_gallery_a"), alt: "Loaves on the counter", assetId: "asset_gallery_a" },
+          { src: inlineImage("asset_gallery_b"), alt: "The crumb up close", assetId: "asset_gallery_b" },
+        ],
+        // the owner's zoom setting, already resolved: the gallery's own setting, else the site's
+        lightbox: true,
+      },
+    },
+    { type: "embed", config: { url: "https://media.kanorio.com/example/tour.mp4", embedType: "video", assetId: "asset_video" } },
+    { type: "embed", config: { url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ", embedType: "youtube", embedUrl: "https://www.youtube.com/embed/aqz-KE-bpKQ" } },
+    { type: "audio", config: { src: "https://media.kanorio.com/example/kitchen.mp3", title: "Kitchen sounds", assetId: "asset_audio" } },
+    // `downloadUrl` is null when the site does not allow downloads
+    {
+      type: "pdf",
+      config: { src: "https://media.kanorio.com/example/recipe.pdf", title: "Recipe card", pageCount: 2, assetId: "asset_pdf", display: "card", downloadUrl: download("asset_pdf", "Recipe card") },
+    },
+    // an attachment always has its `downloadUrl`
+    {
+      type: "file",
+      config: {
+        assetId: "asset_file",
+        name: "Shopping list.xlsx",
+        size: 24576,
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        url: "https://media.kanorio.com/example/shopping-list.xlsx",
+        downloadUrl: download("asset_file", "Shopping list.xlsx"),
+      },
+    },
+  ],
+  contentHtml: [
+    "<p>Hello from <strong>Third post</strong>.</p>",
+    `<div class="kanorio-gallery" data-cols="2" data-kanorio-lightbox="true">${galleryImage("asset_gallery_a", "Loaves on the counter")}${galleryImage("asset_gallery_b", "The crumb up close")}</div>`,
+    `<figure class="kanorio-embed" data-embed-type="video" data-kanorio-asset="asset_video"><video class="kanorio-video" controls preload="metadata" src="https://media.kanorio.com/example/tour.mp4" poster="${MEDIA_ASSETS.asset_video.poster}" crossorigin="anonymous"><track kind="captions" src="https://media.kanorio.com/example/tour.en.vtt" srclang="en" label="en" /></video></figure>`,
+    `<figure class="kanorio-embed" data-embed-type="youtube"><iframe src="https://www.youtube.com/embed/aqz-KE-bpKQ" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></figure>`,
+    `<figure class="kanorio-audio" data-kanorio-asset="asset_audio"><audio class="kanorio-audio" controls src="https://media.kanorio.com/example/kitchen.mp3" data-kanorio-asset="asset_audio"></audio><figcaption>Kitchen sounds</figcaption></figure>`,
+    `<p class="kanorio-pdf" data-kanorio-asset="asset_pdf"><a href="${download("asset_pdf", "Recipe card")}" download>Recipe card</a></p>`,
+    `<p class="kanorio-file" data-kanorio-asset="asset_file"><a href="${download("asset_file", "Shopping list.xlsx")}" download>Shopping list.xlsx</a></p>`,
+  ].join("\n"),
+};
+
 // Like the real API, `share_image` is resolved on the server: the share image the author chose (cropped to 1200x630),
 // else the cover, else the title card Kanorio generated. `source` says which one it is
 function shareImage(post) {
@@ -151,6 +251,14 @@ function shareImage(post) {
 }
 
 function toItem(post, { full }) {
+  const body =
+    post.body === "media"
+      ? MEDIA_BODY
+      : {
+          content: `Hello from **${post.title}**.`,
+          segments: [{ type: "markdown", value: `Hello from **${post.title}**.` }],
+          contentHtml: `<p>Hello from <strong>${post.title}</strong>.</p>`,
+        };
   return {
     id: post.id,
     slug: post.slug,
@@ -169,7 +277,7 @@ function toItem(post, { full }) {
       seo: seo({ title: post.title, description: post.excerpt, ...post.seo }),
       ...(full
         ? {
-            content: `Hello from **${post.title}**.`,
+            content: body.content,
             authors: [],
             categories: [],
             tags: [],
@@ -183,9 +291,9 @@ function toItem(post, { full }) {
     ...(full
       ? {
           expanded: { authors: [], categories: [] },
-          segments: [{ type: "markdown", value: `Hello from **${post.title}**.` }],
+          segments: body.segments,
           toc: [],
-          contentHtml: `<p>Hello from <strong>${post.title}</strong>.</p>`,
+          contentHtml: body.contentHtml,
         }
       : {}),
   };
@@ -232,7 +340,8 @@ export function answer(method, requestUrl) {
     // published carries `collection:blog`, which refreshes a "not found" a front end cached for it
     if (!post?.publishedAt) return notFound("ITEM_NOT_FOUND", [`site:${SITE_ID}`, "collection:blog", "collection:blog:items"]);
     // a single item carries its own id; it does not carry the list tag
-    return reply(200, { item: toItem(post, { full: true }), assets: ASSETS }, [`site:${SITE_ID}`, "collection:blog:items", `item:${post.id}`]);
+    const assets = post.body === "media" ? { ...ASSETS, ...MEDIA_ASSETS } : ASSETS;
+    return reply(200, { item: toItem(post, { full: true }), assets }, [`site:${SITE_ID}`, "collection:blog:items", `item:${post.id}`]);
   }
   return notFound("NOT_FOUND");
 }
